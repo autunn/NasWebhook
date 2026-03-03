@@ -11,6 +11,10 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /app/nas-webhook-app .
 COPY templates ./templates
+
+# 必须复制图片到运行阶段
+COPY logo.png ./
+
 EXPOSE 5080
 VOLUME ["/app/data"]
 CMD ["./nas-webhook-app"]

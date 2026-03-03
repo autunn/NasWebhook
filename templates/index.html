@@ -2,31 +2,33 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>NasWebhook 管理后台</title>
+    <title>配置 - NasWebhook</title>
+    <link rel="icon" href="/logo.png" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { background: #f4f6f9; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 30px; border-radius: 12px; width: 420px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
-        h2 { text-align: center; color: #1e293b; margin-top: 0; margin-bottom: 25px; }
-        .logout { position: absolute; top: 20px; right: 20px; color: #ef4444; text-decoration: none; font-size: 13px; font-weight: 600; }
+        body { background: #f4f6f9; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 420px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
+        .logo { height: 1.2em; width: 1.2em; object-fit: contain; border-radius: 4px; }
+        h2 { margin: 0; font-size: 1.2rem; color: #1e293b; }
+        .logout { position: absolute; top: 30px; right: 30px; color: #ef4444; text-decoration: none; font-size: 13px; font-weight: 600; }
         .group { margin-bottom: 15px; }
         label { display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
         input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
-        button:hover { background: #1d4ed8; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 10px; }
         .hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
         .success-msg { background: #dcfce7; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 20px; text-align: center; font-size: 14px; }
-        hr { border: 0; border-top: 1px dashed #e2e8f0; margin: 20px 0; }
-        .footer { text-align: center; font-size: 11px; color: #cbd5e1; margin-top: 25px; font-family: monospace; }
     </style>
 </head>
 <body>
     <div class="container">
         <a href="/logout" class="logout">退出 ⏻</a>
-        <h2>NasWebhook 配置</h2>
+        <div class="header">
+            <img src="/logo.png" class="logo">
+            <h2>NasWebhook 配置</h2>
+        </div>
         
-        {{if .success}}<div class="success-msg">✅ 配置已成功保存并应用！</div>{{end}}
+        {{if .success}}<div class="success-msg">✅ 配置已成功保存！</div>{{end}}
         
         <form action="/save" method="post">
             <div class="group"><label>企业ID (CorpID)</label><input type="text" name="corpid" value="{{.config.CorpID}}" required></div>
@@ -34,30 +36,13 @@
             <div class="group"><label>应用密钥 (Secret)</label><input type="password" name="corpsecret" value="{{.config.CorpSecret}}" required></div>
             <div class="group"><label>验证 Token</label><input type="text" name="token" value="{{.config.Token}}" required></div>
             <div class="group"><label>EncodingAESKey</label><input type="text" name="encoding_aes_key" value="{{.config.EncodingAESKey}}" required></div>
-            
-            <hr>
-
-            <div class="group">
-                <label>NAS 跳转地址</label>
-                <input type="text" name="nas_url" value="{{.config.NasURL}}" placeholder="http://quickconnect.to/...">
-                <div class="hint">点击推送消息后跳转的地址</div>
-            </div>
-
-            <div class="group">
-                <label>自定义图片 API (可选)</label>
-                <input type="text" name="photo_url" value="{{.config.PhotoURL}}" placeholder="填入图片直链或随机图 API">
-                <div class="hint">留空则默认使用随机风景图</div>
-            </div>
-
-            <div class="group">
-                <label>中转代理地址 (可选)</label>
-                <input type="text" name="proxy_url" value="{{.config.ProxyURL}}" placeholder="例如 http://proxy.com">
-                <div class="hint">用于国内网络环境访问企业微信 API</div>
-            </div>
-
+            <hr style="border:0; border-top:1px dashed #eee; margin:20px 0;">
+            <div class="group"><label>NAS 跳转地址</label><input type="text" name="nas_url" value="{{.config.NasURL}}"></div>
+            <div class="group"><label>自定义图片 API</label><input type="text" name="photo_url" value="{{.config.PhotoURL}}"></div>
+            <div class="group"><label>中转代理地址</label><input type="text" name="proxy_url" value="{{.config.ProxyURL}}"></div>
             <button type="submit">保存配置</button>
         </form>
-        <div class="footer">NasWebhook {{.version}}</div>
+        <div style="text-align: center; font-size: 11px; color: #cbd5e1; margin-top: 25px; font-family: monospace;">{{.version}}</div>
     </div>
 </body>
 </html>

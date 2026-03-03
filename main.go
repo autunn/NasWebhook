@@ -52,6 +52,10 @@ func main() {
 	_ = os.MkdirAll("data", 0755)
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
+
+	// 核心修改：托管本地 logo 映射
+	r.StaticFile("/logo.png", "./logo.png")
+
 	r.LoadHTMLGlob("templates/*")
 
 	adminPass := os.Getenv("ADMIN_PASSWORD")
@@ -181,14 +185,22 @@ func handleMessage(c *gin.Context) {
 
 func pushToWeChat(conf Config, data map[string]interface{}) {
 	baseURL := "https://qyapi.weixin.qq.com"
-	if conf.ProxyURL != "" { baseURL = conf.ProxyURL }
+	if conf.ProxyURL != "" {
+		baseURL = conf.ProxyURL
+	}
 
 	token := getWeChatToken(conf, baseURL)
-	if token == "" { return }
+	if token == "" {
+		return
+	}
 
 	content := "收到来自 NAS 的通知"
-	if m, ok := data["message"].(string); ok { content = m }
-	if t, ok := data["text"].(string); ok { content = t }
+	if m, ok := data["message"].(string); ok {
+		content = m
+	}
+	if t, ok := data["text"].(string); ok {
+		content = t
+	}
 
 	picURL := conf.PhotoURL
 	if picURL == "" {
@@ -219,7 +231,9 @@ func getWeChatToken(conf Config, baseURL string) string {
 		return accessToken
 	}
 	resp, err := http.Get(fmt.Sprintf("%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s", baseURL, conf.CorpID, conf.CorpSecret))
-	if err != nil { return "" }
+	if err != nil {
+		return ""
+	}
 	var res struct {
 		Token string `json:"access_token"`
 		Exp   int64  `json:"expires_in"`

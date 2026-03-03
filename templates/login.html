@@ -2,24 +2,32 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>登录 - NAS Webhook</title>
+    <title>登录 - NasWebhook</title>
+    <link rel="icon" href="/logo.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { background: #f4f6f9; font-family: sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
-        .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 20px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #1e293b; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .error { color: #ef4444; font-size: 14px; }
+        .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 300px; text-align: center; }
+        .header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .logo { height: 32px; width: 32px; object-fit: contain; border-radius: 6px; }
+        h3 { margin: 0; color: #1e293b; font-size: 22px; }
+        input { width: 100%; padding: 12px; margin: 20px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 12px; background: #1e293b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .error { color: #ef4444; font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h3>NAS Webhook 登录</h3>
+        <div class="header">
+            <img src="/logo.png" class="logo">
+            <h3>NasWebhook</h3>
+        </div>
         {{if .error}}<div class="error">{{.error}}</div>{{end}}
         <form action="/login" method="POST">
             <input type="password" name="password" placeholder="请输入管理员密码" required autofocus>
             <button type="submit">进入控制台</button>
         </form>
-        <p style="color:#cbd5e1; font-size:12px; margin-top:20px;">{{.version}}</p>
+        <div style="color:#cbd5e1; font-size:11px; margin-top:25px; font-family: monospace;">{{.version}}</div>
     </div>
 </body>
 </html>
