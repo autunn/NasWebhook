@@ -14,7 +14,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -41,7 +40,7 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	Version              = "v5.8.0-Final"
+	Version              = "v4.2.0-ProxyFix"
 )
 
 func init() {
@@ -55,18 +54,15 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// 1. 静态资源与模板加载
-	r.LoadHTMLGlob("templates/*")
-	// 修复 Logo 无法显示的问题
+	// 1. 托管本地 logo 映射
 	r.StaticFile("/logo.png", "./logo.png")
-	r.Static("/static", "./static")
+	r.LoadHTMLGlob("templates/*")
 
 	adminPass := os.Getenv("ADMIN_PASSWORD")
 	if adminPass == "" {
 		adminPass = "admin"
 	}
 
-	// 2. 身份验证路由
 	r.GET("/login", func(c *gin.Context) {
 		if checkCookie(c) {
 			c.Redirect(http.StatusFound, "/")
@@ -89,12 +85,10 @@ func main() {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// 3. Webhook 核心路由
-	// GET 请求现在支持企业微信验证和普通触发
-	r.GET("/webhook", handleVerify) 
+	// 2. Webhook 路由：GET 现在同时支持验证和手动触发推送
+	r.GET("/webhook", handleVerify)
 	r.POST("/webhook", handleMessage)
 
-	// 4. 后台管理路由
 	auth := r.Group("/")
 	auth.Use(authMiddleware())
 	{
@@ -108,7 +102,7 @@ func main() {
 		auth.POST("/save", handleSave)
 	}
 
-	log.Printf("NAS Webhook %s 已在 :5080 启动", Version)
+	log.Printf("NAS Webhook %s Started", Version)
 	r.Run(":5080")
 }
 
@@ -144,7 +138,7 @@ func handleSave(c *gin.Context) {
 		CorpSecret:     c.PostForm("corpsecret"),
 		Token:          c.PostForm("token"),
 		EncodingAESKey: c.PostForm("encoding_aes_key"),
-		ProxyURL:       strings.TrimSpace(c.PostForm("proxy_url")),
+		ProxyURL:       strings.TrimRight(c.PostForm("proxy_url"), "/"),
 		NasURL:         strings.TrimRight(c.PostForm("nas_url"), "/"),
 		PhotoURL:       c.PostForm("photo_url"),
 		Configured:     true,
@@ -156,9 +150,9 @@ func handleSave(c *gin.Context) {
 
 func handleVerify(c *gin.Context) {
 	echostr := c.Query("echostr")
-	
-	// 修正：如果不是企业微信的 echostr 验证，则尝试作为普通消息推送解析
-	if echostr == "" {
+
+	// --- 核心修复：如果不是企业微信验证请求，则尝试解析为普通推送 ---
+	if echostr == "" && (c.Query("text") != "" || c.Query("message") != "") {
 		handleMessage(c)
 		return
 	}
@@ -173,7 +167,7 @@ func handleVerify(c *gin.Context) {
 	h := sha1.New()
 	h.Write([]byte(strings.Join(params, "")))
 	if fmt.Sprintf("%x", h.Sum(nil)) != msgSig {
-		log.Printf("[Verify] 校验失败，来自: %s", c.ClientIP())
+		log.Printf("[Verify] 签名不匹配，来自: %s", c.ClientIP())
 		c.AbortWithStatus(403)
 		return
 	}
@@ -189,11 +183,12 @@ func handleVerify(c *gin.Context) {
 
 func handleMessage(c *gin.Context) {
 	data := make(map[string]interface{})
-	
-	// 兼容 GET 参数 (?text=xxx)
-	if txt := c.Query("text"); txt != "" { data["text"] = txt }
-	
-	// 兼容 POST JSON
+
+	// 1. 获取 GET 参数
+	if t := c.Query("text"); t != "" { data["text"] = t }
+	if m := c.Query("message"); m != "" { data["message"] = m }
+
+	// 2. 获取 POST JSON (如果存在)
 	var jsonData map[string]interface{}
 	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	if len(bodyBytes) > 0 {
@@ -212,23 +207,20 @@ func handleMessage(c *gin.Context) {
 }
 
 func pushToWeChat(conf Config, data map[string]interface{}) {
-	transport := &http.Transport{}
-	// --- 可选代理核心逻辑 ---
+	baseURL := "https://qyapi.weixin.qq.com"
 	if conf.ProxyURL != "" {
-		proxy, err := url.Parse(conf.ProxyURL)
-		if err == nil {
-			transport.Proxy = http.ProxyURL(proxy)
-			log.Printf("[Proxy] 已应用代理出口: %s", conf.ProxyURL)
-		}
+		baseURL = conf.ProxyURL
 	}
-	client := &http.Client{Transport: transport, Timeout: 15 * time.Second}
 
-	token := getWeChatToken(conf, client)
-	if token == "" { return }
+	token := getWeChatToken(conf, baseURL)
+	if token == "" {
+		log.Printf("[WeChat] 获取 Token 失败")
+		return
+	}
 
-	content := "NAS 系统通知"
-	if t, ok := data["text"].(string); ok { content = t }
+	content := "收到来自 NAS 的通知"
 	if m, ok := data["message"].(string); ok { content = m }
+	if t, ok := data["text"].(string); ok { content = t }
 
 	picURL := conf.PhotoURL
 	if picURL == "" {
@@ -251,27 +243,28 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 	}
 
 	body, _ := json.Marshal(payload)
-	resp, err := client.Post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="+token, "application/json", bytes.NewBuffer(body))
+	url := fmt.Sprintf("%s/cgi-bin/message/send?access_token=%s", baseURL, token)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 	if err == nil {
-		res, _ := io.ReadAll(resp.Body)
-		log.Printf("[WeChat] 发送回执: %s", string(res))
-		resp.Body.Close()
+		defer resp.Body.Close()
+		resBody, _ := io.ReadAll(resp.Body)
+		log.Printf("[WeChat] API 返回结果: %s", string(resBody))
 	} else {
-		log.Printf("[WeChat] 网络异常: %v", err)
+		log.Printf("[WeChat] 请求代理/微信失败: %v", err)
 	}
 }
 
-func getWeChatToken(conf Config, client *http.Client) string {
+func getWeChatToken(conf Config, baseURL string) string {
 	if accessToken != "" && accessTokenExpiresAt > time.Now().Unix() {
 		return accessToken
 	}
-	resp, err := client.Get(fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", conf.CorpID, conf.CorpSecret))
+	resp, err := http.Get(fmt.Sprintf("%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s", baseURL, conf.CorpID, conf.CorpSecret))
 	if err != nil {
-		log.Printf("[Token] 获取异常: %v", err)
+		log.Printf("[Token] 网络请求异常: %v", err)
 		return ""
 	}
 	defer resp.Body.Close()
-
+	
 	var res struct {
 		Token string `json:"access_token"`
 		Exp   int64  `json:"expires_in"`
