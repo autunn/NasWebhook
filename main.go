@@ -10,9 +10,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -43,7 +41,7 @@ var sessionToken string
 
 // App 信息
 var AppName = "NAS Webhook"
-var Version = "v3.3.1"
+var Version = "v4.0.1"
 
 func init() {
 	b := make([]byte, 16)
@@ -157,11 +155,7 @@ func handleWebhookVerify(c *gin.Context) {
 		c.String(http.StatusForbidden, "Sign Error")
 		return
 	}
-	decryptedMsg, err := decryptEchoStr(conf.EncodingAESKey, echostr)
-	if err != nil {
-		c.String(http.StatusForbidden, "Decrypt Error")
-		return
-	}
+	decryptedMsg, _ := decryptEchoStr(conf.EncodingAESKey, echostr)
 	c.String(http.StatusOK, string(decryptedMsg))
 }
 
@@ -190,12 +184,9 @@ func verifySignature(token, timestamp, nonce, echostr, msgSignature string) bool
 }
 
 func decryptEchoStr(encodingAESKey, echostr string) ([]byte, error) {
-	aesKey, err := base64.StdEncoding.DecodeString(encodingAESKey + "=")
-	if err != nil { return nil, err }
-	cipherText, err := base64.StdEncoding.DecodeString(echostr)
-	if err != nil { return nil, err }
-	block, err := aes.NewCipher(aesKey)
-	if err != nil { return nil, err }
+	aesKey, _ := base64.StdEncoding.DecodeString(encodingAESKey + "=")
+	cipherText, _ := base64.StdEncoding.DecodeString(echostr)
+	block, _ := aes.NewCipher(aesKey)
 	iv := aesKey[:16]
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(cipherText, cipherText)
