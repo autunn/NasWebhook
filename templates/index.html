@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Synology Webhook</title>
+    <title>NAS Webhook</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -17,7 +17,7 @@
             width: 420px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
             overflow-y: auto; max-height: 90vh;
-            position: relative; /* 关键：作为绝对定位的基准 */
+            position: relative;
         }
         
         /* 退出按钮 - 悬浮在右上角 */
@@ -97,7 +97,7 @@
     <div class="container">
         <a href="/logout" class="logout-btn">退出 ⏻</a>
 
-        <img src="https://raw.githubusercontent.com/autunn/SynologyWebhook/main/logo.png" alt="Logo" class="logo">
+        <img src="https://raw.githubusercontent.com/autunn/nas-webhook/main/logo.png" alt="Logo" class="logo">
         
         <h2>微信推送配置</h2>
         
@@ -132,8 +132,8 @@
             
             <div class="group">
                 <label>NAS 跳转地址</label>
-                <input type="text" name="nas_url" placeholder="http://quickconnect.to/..." value="{{.config.NasURL}}">
-                <div class="hint">点击卡片后跳转的地址</div>
+                <input type="text" name="nas_url" placeholder="http://192.168.x.x:端口" value="{{.config.NasURL}}">
+                <div class="hint">点击卡片后跳转的 NAS 地址</div>
             </div>
             <div class="group">
                 <label>图片 API (可选)</label>
@@ -148,7 +148,7 @@
             <button type="submit">保存配置</button>
         </form>
 
-        <div class="footer">Synology Webhook {{.version}}</div>
+        <div class="footer">NAS Webhook {{.version}}</div>
     </div>
 </body>
 </html>

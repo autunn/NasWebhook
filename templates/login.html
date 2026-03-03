@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>登录 - Synology Webhook</title>
+    <title>登录 - NAS Webhook</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -33,7 +33,7 @@
 </head>
 <body>
     <div class="container">
-        <img src="https://raw.githubusercontent.com/autunn/SynologyWebhook/main/logo.png" class="logo">
+        <img src="https://raw.githubusercontent.com/autunn/nas-webhook/main/logo.png" class="logo">
         
         <h2>身份验证</h2>
         
@@ -42,7 +42,7 @@
         {{end}}
         
         <form action="/login" method="post">
-            <input type="password" name="password" placeholder="请输入管理员密码" required autofocus>
+            <input type="password" name="password" placeholder="请输入管理密码" required autofocus>
             <button type="submit">登 录</button>
         </form>
 
