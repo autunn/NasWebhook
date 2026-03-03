@@ -7,6 +7,8 @@
   <p>连接各类品牌 NAS 与 企业微信的通用化消息桥梁</p>
 </p>
 
+![Pulls](https://img.shields.io/docker/pulls/autunn/nas-webhook)
+
 <p align="center">
   <a href="https://github.com/autunn/NasWebhook">
     <img src="https://img.shields.io/badge/GitHub-Source%20Code-000000?style=flat-square&logo=github" alt="GitHub" />
