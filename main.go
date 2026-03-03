@@ -40,7 +40,7 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	Version              = "v4.2.0-ProxyFix"
+	Version              = "v4.2.1-Final"
 )
 
 func init() {
@@ -54,7 +54,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// 1. 托管本地 logo 映射
+	// 1. 修复：静态资源映射（确保根目录 logo.png 可见）
 	r.StaticFile("/logo.png", "./logo.png")
 	r.LoadHTMLGlob("templates/*")
 
@@ -63,6 +63,7 @@ func main() {
 		adminPass = "admin"
 	}
 
+	// 2. 身份验证路由
 	r.GET("/login", func(c *gin.Context) {
 		if checkCookie(c) {
 			c.Redirect(http.StatusFound, "/")
@@ -85,10 +86,11 @@ func main() {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// 2. Webhook 路由：GET 现在同时支持验证和手动触发推送
+	// 3. Webhook 路由：GET 同时支持验证和触发
 	r.GET("/webhook", handleVerify)
 	r.POST("/webhook", handleMessage)
 
+	// 4. 管理后台
 	auth := r.Group("/")
 	auth.Use(authMiddleware())
 	{
@@ -102,7 +104,7 @@ func main() {
 		auth.POST("/save", handleSave)
 	}
 
-	log.Printf("NAS Webhook %s Started", Version)
+	log.Printf("NAS Webhook %s 已在 :5080 启动", Version)
 	r.Run(":5080")
 }
 
@@ -151,8 +153,8 @@ func handleSave(c *gin.Context) {
 func handleVerify(c *gin.Context) {
 	echostr := c.Query("echostr")
 
-	// --- 核心修复：如果不是企业微信验证请求，则尝试解析为普通推送 ---
-	if echostr == "" && (c.Query("text") != "" || c.Query("message") != "") {
+	// 修复：如果不是企业微信验证（无 echostr），则按普通推送解析，解决 GET 触发 403
+	if echostr == "" && (c.Query("text") != "" || c.Query("message") != "" || c.Query("task") != "") {
 		handleMessage(c)
 		return
 	}
@@ -167,7 +169,7 @@ func handleVerify(c *gin.Context) {
 	h := sha1.New()
 	h.Write([]byte(strings.Join(params, "")))
 	if fmt.Sprintf("%x", h.Sum(nil)) != msgSig {
-		log.Printf("[Verify] 签名不匹配，来自: %s", c.ClientIP())
+		log.Printf("[Verify] 签名不匹配，IP: %s", c.ClientIP())
 		c.AbortWithStatus(403)
 		return
 	}
@@ -184,16 +186,22 @@ func handleVerify(c *gin.Context) {
 func handleMessage(c *gin.Context) {
 	data := make(map[string]interface{})
 
-	// 1. 获取 GET 参数
-	if t := c.Query("text"); t != "" { data["text"] = t }
-	if m := c.Query("message"); m != "" { data["message"] = m }
+	// 修复：合并数据包，先存 URL 参数
+	for k, v := range c.Request.URL.Query() {
+		if len(v) > 0 {
+			data[k] = v[0]
+		}
+	}
 
-	// 2. 获取 POST JSON (如果存在)
-	var jsonData map[string]interface{}
+	// 修复：再存 POST Body（如果有 JSON 内容，会合并进来）
 	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	if len(bodyBytes) > 0 {
-		json.Unmarshal(bodyBytes, &jsonData)
-		for k, v := range jsonData { data[k] = v }
+		var jsonData map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &jsonData); err == nil {
+			for k, v := range jsonData {
+				data[k] = v
+			}
+		}
 	}
 
 	if len(data) > 0 {
@@ -218,9 +226,13 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 		return
 	}
 
-	content := "收到来自 NAS 的通知"
-	if m, ok := data["message"].(string); ok { content = m }
-	if t, ok := data["text"].(string); ok { content = t }
+	// 动态描述构造：将所有收到的参数拼入卡片
+	var description strings.Builder
+	description.WriteString(fmt.Sprintf("时间: %s", time.Now().Format("15:04:05")))
+	
+	for k, v := range data {
+		description.WriteString(fmt.Sprintf("\n%s: %v", k, v))
+	}
 
 	picURL := conf.PhotoURL
 	if picURL == "" {
@@ -235,7 +247,7 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 		"news": map[string]interface{}{
 			"articles": []map[string]interface{}{{
 				"title":       "NAS 通知中心",
-				"description": fmt.Sprintf("时间: %s\n内容: %s", time.Now().Format("15:04:05"), content),
+				"description": description.String(),
 				"url":         conf.NasURL,
 				"picurl":      picURL,
 			}},
@@ -260,11 +272,11 @@ func getWeChatToken(conf Config, baseURL string) string {
 	}
 	resp, err := http.Get(fmt.Sprintf("%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s", baseURL, conf.CorpID, conf.CorpSecret))
 	if err != nil {
-		log.Printf("[Token] 网络请求异常: %v", err)
+		log.Printf("[Token] 获取异常: %v", err)
 		return ""
 	}
 	defer resp.Body.Close()
-	
+
 	var res struct {
 		Token string `json:"access_token"`
 		Exp   int64  `json:"expires_in"`
