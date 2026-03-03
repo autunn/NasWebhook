@@ -6,148 +6,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            background: #f4f6f9; /* 高级灰背景 */
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center;
         }
         .container {
-            background: white; 
-            padding: 40px 30px; 
-            border-radius: 16px; 
-            width: 420px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
-            overflow-y: auto; max-height: 90vh;
-            position: relative;
+            background: white; padding: 40px 30px; border-radius: 16px; width: 420px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow-y: auto; max-height: 90vh; position: relative;
         }
-        
-        /* 退出按钮 - 悬浮在右上角 */
         .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-decoration: none;
-            color: #ef4444; 
-            font-size: 13px;
-            font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 20px;
-            background-color: #fef2f2;
-            transition: all 0.2s;
+            position: absolute; top: 20px; right: 20px; text-decoration: none; color: #ef4444; 
+            font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background-color: #fef2f2;
         }
-        .logout-btn:hover {
-            background-color: #fee2e2;
-            color: #dc2626;
-        }
-
-        /* Logo 样式 */
-        .logo {
-            display: block;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px auto;
-            border-radius: 18px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            object-fit: cover;
-        }
-
-        h2 { 
-            text-align: center; margin-bottom: 25px; 
-            color: #2c3e50; font-size: 22px; font-weight: 700;
-        }
+        .logo { display: block; width: 80px; height: 80px; margin: 0 auto 20px auto; border-radius: 18px; object-fit: cover; }
+        h2 { text-align: center; margin-bottom: 25px; color: #2c3e50; font-size: 22px; }
         .group { margin-bottom: 18px; }
-        label { 
-            display: block; font-size: 13px; font-weight: 600; 
-            color: #5c6b7f; margin-bottom: 6px; 
-        }
+        label { display: block; font-size: 13px; font-weight: 600; color: #5c6b7f; margin-bottom: 6px; }
         input {
-            width: 100%; padding: 12px; 
-            border: 1px solid #e1e4e8; border-radius: 8px;
-            box-sizing: border-box; font-size: 14px;
-            transition: border-color 0.2s;
-        }
-        input:focus {
-            border-color: #007bff; outline: none;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            width: 100%; padding: 12px; border: 1px solid #e1e4e8; border-radius: 8px; box-sizing: border-box;
         }
         button {
-            width: 100%; padding: 14px; 
-            background: #007bff; color: white; 
-            font-weight: 600; border: none; border-radius: 8px; 
+            width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; 
             cursor: pointer; font-size: 16px; margin-top: 15px;
-            transition: background 0.2s;
         }
-        button:hover { background: #0056b3; }
-        .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; margin-bottom: 5px; }
-        .success { 
-            background: #d1fae5; color: #065f46; 
-            padding: 12px; border-radius: 8px; 
-            margin-bottom: 20px; text-align: center; font-size: 14px; font-weight: 500;
-        }
-        .required { color: #ef4444; margin-left: 3px; }
+        .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .success { background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
         hr { border: 0; border-top: 1px dashed #e2e8f0; margin: 20px 0; }
-        
-        /* 版本号页脚 */
-        .footer {
-            text-align: center; margin-top: 30px;
-            font-size: 12px; color: #94a3b8; font-family: monospace;
-        }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; font-family: monospace; }
     </style>
 </head>
 <body>
     <div class="container">
         <a href="/logout" class="logout-btn">退出 ⏻</a>
-
         <img src="https://raw.githubusercontent.com/autunn/nas-webhook/main/logo.png" alt="Logo" class="logo">
-        
         <h2>微信推送配置</h2>
-        
         {{if .success}}<div class="success">✅ 配置已保存！请去企业微信测试</div>{{end}}
-        
         <form action="/save" method="post">
-            <div class="group">
-                <label>企业ID (CorpID)<span class="required">*</span></label>
-                <input type="text" name="corpid" value="{{.config.CorpID}}" required>
-            </div>
-            <div class="group">
-                <label>应用ID (AgentID)<span class="required">*</span></label>
-                <input type="text" name="agentid" value="{{.config.AgentID}}" required>
-            </div>
-            <div class="group">
-                <label>应用密钥 (Secret)<span class="required">*</span></label>
-                <input type="password" name="corpsecret" value="{{.config.CorpSecret}}" required>
-            </div>
-
+            <div class="group"><label>企业ID (CorpID)</label><input type="text" name="corpid" value="{{.config.CorpID}}" required></div>
+            <div class="group"><label>应用ID (AgentID)</label><input type="text" name="agentid" value="{{.config.AgentID}}" required></div>
+            <div class="group"><label>应用密钥 (Secret)</label><input type="password" name="corpsecret" value="{{.config.CorpSecret}}" required></div>
             <hr>
-            
-            <div class="group">
-                <label>接收消息 Token<span class="required">*</span></label>
-                <input type="text" name="token" value="{{.config.Token}}" placeholder="企业微信后台生成的 Token" required>
-            </div>
-            <div class="group">
-                <label>接收消息 AESKey<span class="required">*</span></label>
-                <input type="text" name="encoding_aes_key" value="{{.config.EncodingAESKey}}" placeholder="企业微信后台生成的 EncodingAESKey" required>
-            </div>
-
+            <div class="group"><label>接收消息 Token</label><input type="text" name="token" value="{{.config.Token}}" required></div>
+            <div class="group"><label>接收消息 AESKey</label><input type="text" name="encoding_aes_key" value="{{.config.EncodingAESKey}}" required></div>
             <hr>
-            
-            <div class="group">
-                <label>NAS 跳转地址</label>
-                <input type="text" name="nas_url" placeholder="http://192.168.x.x:端口" value="{{.config.NasURL}}">
-                <div class="hint">点击卡片后跳转的 NAS 地址</div>
-            </div>
-            <div class="group">
-                <label>图片 API (可选)</label>
-                <input type="text" name="photo_url" placeholder="自定义图片 URL" value="{{.config.PhotoURL}}">
-                <div class="hint">留空则使用随机风景图</div>
-            </div>
-            <div class="group">
-                <label>代理地址 (可选)</label>
-                <input type="text" name="proxy_url" placeholder="例如: http://proxy.com" value="{{.config.ProxyURL}}">
-            </div>
-
+            <div class="group"><label>NAS 跳转地址</label><input type="text" name="nas_url" value="{{.config.NasURL}}"><div class="hint">点击通知后跳转的地址</div></div>
+            <div class="group"><label>图片 API (可选)</label><input type="text" name="photo_url" value="{{.config.PhotoURL}}"></div>
             <button type="submit">保存配置</button>
         </form>
-
         <div class="footer">NAS Webhook {{.version}}</div>
     </div>
 </body>
