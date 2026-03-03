@@ -40,8 +40,8 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	// 基础版本号，会被 GitHub Actions 的标签自动覆盖
-	Version              = "v2.0"
+	// 默认值，将被编译时的日期参数覆盖
+	Version              = "v2026.03.03"
 )
 
 func init() {

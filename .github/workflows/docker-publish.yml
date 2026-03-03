@@ -3,7 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ]
-    tags: [ 'v*' ] # 当推送 v1.0, v2.0 等标签时触发
   workflow_dispatch:
 
 jobs:
@@ -31,9 +30,9 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          # 关键点：将当前 Git Tag 传入 Dockerfile
+          # 动态获取当前北京时间作为版本号
           build-args: |
-            APP_VERSION=${{ github.ref_name }}
+            APP_VERSION=v$(date +'%Y.%m.%d')
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:v${{ github.run_number }}
