@@ -40,7 +40,7 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	Version              = "v4.2.1-Final"
+	Version              = "v4.2.2-Stable"
 )
 
 func init() {
@@ -54,7 +54,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// 1. 修复：静态资源映射（确保根目录 logo.png 可见）
+	// 1. 静态资源映射（确保 Logo 正常显示）
 	r.StaticFile("/logo.png", "./logo.png")
 	r.LoadHTMLGlob("templates/*")
 
@@ -86,7 +86,7 @@ func main() {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// 3. Webhook 路由：GET 同时支持验证和触发
+	// 3. Webhook 核心路由
 	r.GET("/webhook", handleVerify)
 	r.POST("/webhook", handleMessage)
 
@@ -104,7 +104,7 @@ func main() {
 		auth.POST("/save", handleSave)
 	}
 
-	log.Printf("NAS Webhook %s 已在 :5080 启动", Version)
+	log.Printf("NAS Webhook %s 已启动 (端口 :5080)", Version)
 	r.Run(":5080")
 }
 
@@ -153,7 +153,7 @@ func handleSave(c *gin.Context) {
 func handleVerify(c *gin.Context) {
 	echostr := c.Query("echostr")
 
-	// 修复：如果不是企业微信验证（无 echostr），则按普通推送解析，解决 GET 触发 403
+	// 兼容：非验证请求但带参数时，直接转交给消息处理逻辑
 	if echostr == "" && (c.Query("text") != "" || c.Query("message") != "" || c.Query("task") != "") {
 		handleMessage(c)
 		return
@@ -169,7 +169,7 @@ func handleVerify(c *gin.Context) {
 	h := sha1.New()
 	h.Write([]byte(strings.Join(params, "")))
 	if fmt.Sprintf("%x", h.Sum(nil)) != msgSig {
-		log.Printf("[Verify] 签名不匹配，IP: %s", c.ClientIP())
+		log.Printf("[Verify] 签名校验失败")
 		c.AbortWithStatus(403)
 		return
 	}
@@ -186,14 +186,14 @@ func handleVerify(c *gin.Context) {
 func handleMessage(c *gin.Context) {
 	data := make(map[string]interface{})
 
-	// 修复：合并数据包，先存 URL 参数
+	// 合并 URL 参数
 	for k, v := range c.Request.URL.Query() {
 		if len(v) > 0 {
 			data[k] = v[0]
 		}
 	}
 
-	// 修复：再存 POST Body（如果有 JSON 内容，会合并进来）
+	// 合并 JSON Body
 	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	if len(bodyBytes) > 0 {
 		var jsonData map[string]interface{}
@@ -221,22 +221,25 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 	}
 
 	token := getWeChatToken(conf, baseURL)
-	if token == "" {
-		log.Printf("[WeChat] 获取 Token 失败")
-		return
-	}
+	if token == "" { return }
 
-	// 动态描述构造：将所有收到的参数拼入卡片
+	// 描述构造
 	var description strings.Builder
 	description.WriteString(fmt.Sprintf("时间: %s", time.Now().Format("15:04:05")))
-	
 	for k, v := range data {
 		description.WriteString(fmt.Sprintf("\n%s: %v", k, v))
 	}
 
+	// 核心逻辑：随机老婆 API + 纳秒级去缓存
 	picURL := conf.PhotoURL
 	if picURL == "" {
-		picURL = fmt.Sprintf("https://picsum.photos/600/300?random=%d", time.Now().Unix())
+		// 默认使用国内加速二次元接口，拼接纳秒级随机数
+		picURL = fmt.Sprintf("https://api.vvhan.com/api/wallpaper/acg?rand=%d", time.Now().UnixNano())
+	} else {
+		// 如果用户填写了自定义 API，强制追加随机参数防止微信缓存旧图
+		connector := "?"
+		if strings.Contains(picURL, "?") { connector = "&" }
+		picURL = fmt.Sprintf("%s%sv=%d", picURL, connector, time.Now().UnixNano())
 	}
 
 	agentID, _ := strconv.Atoi(conf.AgentID)
@@ -260,9 +263,9 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 	if err == nil {
 		defer resp.Body.Close()
 		resBody, _ := io.ReadAll(resp.Body)
-		log.Printf("[WeChat] API 返回结果: %s", string(resBody))
+		log.Printf("[WeChat] 发送回执: %s", string(resBody))
 	} else {
-		log.Printf("[WeChat] 请求代理/微信失败: %v", err)
+		log.Printf("[WeChat] 网络故障: %v", err)
 	}
 }
 
@@ -271,10 +274,7 @@ func getWeChatToken(conf Config, baseURL string) string {
 		return accessToken
 	}
 	resp, err := http.Get(fmt.Sprintf("%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s", baseURL, conf.CorpID, conf.CorpSecret))
-	if err != nil {
-		log.Printf("[Token] 获取异常: %v", err)
-		return ""
-	}
+	if err != nil { return "" }
 	defer resp.Body.Close()
 
 	var res struct {
