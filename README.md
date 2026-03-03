@@ -1,32 +1,24 @@
+
 # NasWebhook
 
-![Logo](logo.png)
-
-> 连接各类品牌 NAS 与 企业微信的通用化消息桥梁
-
----
-
-### 项目状态 (Status)
-
-[![GitHub Source](https://img.shields.io/badge/GitHub-Source%20Code-000000?style=flat-square&logo=github)](https://github.com/autunn/NasWebhook)
-[![Docker Pulls](https://img.shields.io/docker/pulls/autunn/nas-webhook?style=flat-square&logo=docker&color=0db7ed)](https://hub.docker.com/r/autunn/nas-webhook)
-[![Docker Image Size](https://img.shields.io/docker/image-size/autunn/nas-webhook/latest?style=flat-square&logo=docker)](https://hub.docker.com/r/autunn/nas-webhook)
-[![License](https://img.shields.io/badge/License-MIT-2ecc71?style=flat-square)](https://github.com/autunn/NasWebhook/blob/main/LICENSE)
+![GitHub](https://img.shields.io/badge/GitHub-Source%20Code-000000?style=flat-square&logo=github)
+![Pulls](https://img.shields.io/docker/pulls/autunn/nas-webhook?style=flat-square&logo=docker&color=0db7ed)
+![Size](https://img.shields.io/docker/image-size/autunn/nas-webhook/latest?style=flat-square&logo=docker)
+![License](https://img.shields.io/badge/License-MIT-2ecc71?style=flat-square)
 
 ---
 
-## 简介 (Introduction)
+**NasWebhook** 是一个通用的 Webhook 转发服务，旨在将各品牌 NAS（如群晖、绿联 UGOS Pro、极空间等）及下载工具（如 qBittorrent）的系统通知推送到企业微信。
 
-NasWebhook 是一个通用的 Webhook 转发服务，旨在将各品牌 NAS（如群晖、绿联 UGOS Pro、极空间等）及下载工具（如 qBittorrent）的系统通知推送到企业微信。
-
-## 特性 (Features)
+## 🛠️ 特性 (Features)
 
 - **品牌通用**：适配所有支持自定义 JSON Webhook 的系统。
-- **可视化后台**：内置 Web 管理界面，轻松配置参数。
-- **多架构支持**：支持 Docker 多架构（amd64/arm64）自动构建。
+- **管理后台**：内置 Web 界面，支持在线配置企业微信参数。
+- **安全加固**：支持自定义管理员密码登录，遵循加密协议。
+- **自动化构建**：支持 Docker 多架构（amd64/arm64）自动构建。
 - **个性化封面**：支持接入随机动漫图片 API。
 
-## 快速启动 (Quick Start)
+## 🚀 快速启动
 
 ### Docker Compose
 ```yaml
@@ -46,8 +38,19 @@ services:
 
 ```
 
-## 配置指南 (Configuration)
+## 📝 配置指南
 
-1. **登录后台**：访问 `http://IP:5080`，使用环境变量中的 `ADMIN_PASSWORD` 登录。
+1. **登录后台**：访问 `http://IP:5080`，默认密码为环境变量中的 `ADMIN_PASSWORD`。
 2. **企业微信配置**：在后台填写 `CorpID`、`AgentID`、`Secret`、`Token` 和 `EncodingAESKey`。
-3. **Webhook URL**：在 NAS 端设置 Webhook 目标地址为 `http://你的访问地址/webhook`。
+3. **设置图片 API**：推荐填入 `https://api.vvhan.com/api/wallpaper/views?type=aliyun`。
+4. **测试通知**：
+```bash
+curl -X POST -H "Content-Type: application/json" -d "{\"message\":\"NasWebhook 测试通知\"}" http://你的IP:5080/webhook
+
+```
+
+
+
+## 📁 挂载卷
+
+* `/app/data`：存储 `config.json` 配置文件。
