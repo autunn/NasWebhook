@@ -12,6 +12,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 1. 提前生成日期变量
+      - name: Set current date
+        run: echo "BUILD_DATE=v$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -30,9 +34,9 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          # 动态获取当前北京时间作为版本号
+          # 2. 将日期变量传给 Docker
           build-args: |
-            APP_VERSION=v$(date +'%Y.%m.%d')
+            APP_VERSION=${{ env.BUILD_DATE }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:v${{ github.run_number }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/nas-webhook:${{ env.BUILD_DATE }}

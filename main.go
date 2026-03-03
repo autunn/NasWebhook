@@ -40,8 +40,8 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	// 默认值，将被编译时的日期参数覆盖
-	Version              = "v2026.03.03"
+	// 默认显示，会被构建时的 -ldflags 覆盖
+	Version              = "v2026.03.03" 
 )
 
 func init() {

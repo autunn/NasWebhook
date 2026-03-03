@@ -1,6 +1,6 @@
 FROM golang:1.21-alpine AS builder
 
-# 接收编译时的版本号参数
+# 接收构建参数
 ARG APP_VERSION=v2026.03.03
 
 WORKDIR /app
@@ -10,9 +10,9 @@ COPY . .
 RUN go mod init nas-webhook || true
 RUN go mod tidy
 
-# 注入 APP_VERSION 到 main.Version 变量
+# 修复点：去掉外层多余的双引号解析，确保 ldflags 作为一个整体被 Go 捕获
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags "-s -w -X 'main.Version=${APP_VERSION}'" \
+    -ldflags "-s -w -X main.Version=${APP_VERSION}" \
     -o nas-webhook-app .
 
 FROM alpine:latest
