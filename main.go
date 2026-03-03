@@ -14,7 +14,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url" // 关键：用于解析代理协议
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -41,7 +41,7 @@ var (
 	accessToken          string
 	accessTokenExpiresAt int64
 	sessionToken         string
-	Version              = "v5.0.0-Final"
+	Version              = "v5.8.0-Final"
 )
 
 func init() {
@@ -55,11 +55,10 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// 1. 模板与静态资源配置
+	// 1. 静态资源与模板加载
 	r.LoadHTMLGlob("templates/*")
-	// 修复：显式映射根目录的 logo.png，确保网页能正常显示
+	// 修复 Logo 无法显示的问题
 	r.StaticFile("/logo.png", "./logo.png")
-	// 如果你还有其他静态文件，可以保留这个映射
 	r.Static("/static", "./static")
 
 	adminPass := os.Getenv("ADMIN_PASSWORD")
@@ -90,11 +89,12 @@ func main() {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// 3. Webhook 接口
-	r.GET("/webhook", handleVerify)
+	// 3. Webhook 核心路由
+	// GET 请求现在支持企业微信验证和普通触发
+	r.GET("/webhook", handleVerify) 
 	r.POST("/webhook", handleMessage)
 
-	// 4. 管理后台
+	// 4. 后台管理路由
 	auth := r.Group("/")
 	auth.Use(authMiddleware())
 	{
@@ -108,7 +108,7 @@ func main() {
 		auth.POST("/save", handleSave)
 	}
 
-	log.Printf("NAS Webhook %s Started on :5080", Version)
+	log.Printf("NAS Webhook %s 已在 :5080 启动", Version)
 	r.Run(":5080")
 }
 
@@ -155,17 +155,25 @@ func handleSave(c *gin.Context) {
 }
 
 func handleVerify(c *gin.Context) {
+	echostr := c.Query("echostr")
+	
+	// 修正：如果不是企业微信的 echostr 验证，则尝试作为普通消息推送解析
+	if echostr == "" {
+		handleMessage(c)
+		return
+	}
+
 	conf := loadConfig()
 	msgSig := c.Query("msg_signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	echostr := c.Query("echostr")
 
 	params := []string{conf.Token, timestamp, nonce, echostr}
 	sort.Strings(params)
 	h := sha1.New()
 	h.Write([]byte(strings.Join(params, "")))
 	if fmt.Sprintf("%x", h.Sum(nil)) != msgSig {
+		log.Printf("[Verify] 校验失败，来自: %s", c.ClientIP())
 		c.AbortWithStatus(403)
 		return
 	}
@@ -180,10 +188,12 @@ func handleVerify(c *gin.Context) {
 }
 
 func handleMessage(c *gin.Context) {
-	// 超级解析：兼容 URL 传参和 JSON Body
 	data := make(map[string]interface{})
+	
+	// 兼容 GET 参数 (?text=xxx)
 	if txt := c.Query("text"); txt != "" { data["text"] = txt }
 	
+	// 兼容 POST JSON
 	var jsonData map[string]interface{}
 	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	if len(bodyBytes) > 0 {
@@ -194,7 +204,7 @@ func handleMessage(c *gin.Context) {
 	if len(data) > 0 {
 		conf := loadConfig()
 		if conf.Configured {
-			log.Printf("[Webhook] 接收到推送数据: %v", data)
+			log.Printf("[Webhook] 触发消息发送: %v", data)
 			go pushToWeChat(conf, data)
 		}
 	}
@@ -202,13 +212,13 @@ func handleMessage(c *gin.Context) {
 }
 
 func pushToWeChat(conf Config, data map[string]interface{}) {
-	// 构建支持可选代理的 HTTP Client
 	transport := &http.Transport{}
+	// --- 可选代理核心逻辑 ---
 	if conf.ProxyURL != "" {
 		proxy, err := url.Parse(conf.ProxyURL)
 		if err == nil {
 			transport.Proxy = http.ProxyURL(proxy)
-			log.Printf("[Proxy] 代理启用: %s", conf.ProxyURL)
+			log.Printf("[Proxy] 已应用代理出口: %s", conf.ProxyURL)
 		}
 	}
 	client := &http.Client{Transport: transport, Timeout: 15 * time.Second}
@@ -241,14 +251,13 @@ func pushToWeChat(conf Config, data map[string]interface{}) {
 	}
 
 	body, _ := json.Marshal(payload)
-	// 使用带代理逻辑的 client 发送
 	resp, err := client.Post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="+token, "application/json", bytes.NewBuffer(body))
 	if err == nil {
 		res, _ := io.ReadAll(resp.Body)
-		log.Printf("[WeChat] 发送状态: %s", string(res))
+		log.Printf("[WeChat] 发送回执: %s", string(res))
 		resp.Body.Close()
 	} else {
-		log.Printf("[WeChat] 网络故障: %v", err)
+		log.Printf("[WeChat] 网络异常: %v", err)
 	}
 }
 
@@ -258,7 +267,7 @@ func getWeChatToken(conf Config, client *http.Client) string {
 	}
 	resp, err := client.Get(fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", conf.CorpID, conf.CorpSecret))
 	if err != nil {
-		log.Printf("[Token] 错误: %v", err)
+		log.Printf("[Token] 获取异常: %v", err)
 		return ""
 	}
 	defer resp.Body.Close()
