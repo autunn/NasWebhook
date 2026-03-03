@@ -23,15 +23,15 @@
 
 ## 简介 (Introduction)
 
-[cite_start]NasWebhook 是一个轻量级的通知转发服务 [cite: 21, 23][cite_start]。它能接收来自不同 NAS 系统（如绿联 UGOS Pro、群晖 DSM、极空间）或下载工具（如 qBittorrent）的 Webhook 信号，并将其转化为精美的图文消息推送到你的企业微信 [cite: 22]。
+NasWebhook 是一个通用的 Webhook 转发服务，旨在将各品牌 NAS（如群晖、绿联 UGOS Pro、极空间等）及下载工具（如 qBittorrent）的系统通知推送到企业微信。
 
 ## 特性 (Features)
 
-- [cite_start]**全平台兼容**：支持所有能自定义 JSON Webhook 的系统与软件 [cite: 21, 22]。
-- [cite_start]**现代化 UI**：内置简洁的管理后台，支持在线配置微信参数 [cite: 21]。
-- [cite_start]**安全加固**：支持 `ADMIN_PASSWORD` 身份验证，并严格遵循企业微信消息加密协议 [cite: 21]。
-- **自动化构建**：支持 Docker 多架构（amd64/arm64）自动构建并推送至 Docker Hub。
-- **动态封面**：支持接入随机动漫图片 API，让每一条通知都独一无二。
+- **品牌通用**：适配所有支持自定义 JSON Webhook 的系统。
+- **可视化后台**：内置 Web 管理界面，轻松配置企业微信参数。
+- **安全加固**：支持自定义管理员密码登录，并遵循企业微信加解密协议。
+- **自动化构建**：支持 Docker 多架构（amd64/arm64）自动构建并推送到 Docker Hub。
+- **个性化封面**：支持接入随机动漫图片 API，让通知卡片更精美。
 
 ## 快速启动 (Quick Start)
 
@@ -69,21 +69,11 @@ docker run -d \
 
 ## 配置指南 (Configuration)
 
-1. 
-**进入后台**：访问 `http://IP:5080`，使用密码登录 。
-
-
-2. **企业微信配置**：在后台填写 `CorpID`、`AgentID`、`Secret`、`Token` 和 `EncodingAESKey`。
-3. **设置图片 API**：推荐填入 `https://api.vvhan.com/api/wallpaper/views?type=aliyun` 获取随机动漫封面。
-4. **测试连接**：
-```powershell
-curl -X POST -H "Content-Type: application/json" -d "{\"message\":\"NasWebhook 测试通知\"}" http://你的IP:5080/webhook
-
-```
-
-
+1. **进入后台**：访问 `http://IP:5080`，使用密码登录（默认 `admin`）。
+2. **填写参数**：在后台填写企业微信的 `CorpID`、`AgentID`、`Secret`、`Token` 和 `EncodingAESKey`。
+3. **设置图片**：推荐在图片 API 栏填入 `https://api.vvhan.com/api/wallpaper/views?type=aliyun`。
+4. **Webhook URL**：在 NAS 端填写 `http://你的访问地址/webhook`。
 
 ## 挂载卷 (Volumes)
 
-* 
-`/app/data`：用于持久化存储 `config.json` 配置文件 。
+* `/app/data`：用于持久化存储 `config.json` 配置文件。
